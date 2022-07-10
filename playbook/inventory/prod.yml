@@ -11,3 +11,7 @@
     hosts:
       localhost:
         ansible_connection: ssh
+  federa:
+    hosts:
+      fedora:
+        ansible_connection: docker
