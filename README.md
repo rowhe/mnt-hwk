@@ -12,6 +12,7 @@ sudo docker run -d --rm --name deb11 debian:11 sleep 50000000000
 ```shell
 ansible-playbook --version
 ```
+* Плейбук следует запускать из директории `playbook` предварительно зайдя в нее при помощи команды `cd playbook`
 * Ансибл в качестве параметров принимает файлы inventory/prod.yml и site.yml 
 * Строка запуска плейбука должна выглядеть следующим образом:
 ```shell
