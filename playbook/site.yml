@@ -1,17 +1,84 @@
 ---
-  - name: Prepare deb
-    hosts: deb
-    gather_facts: false
-    tasks:
-      - name: Installing python
-        raw: apt update && apt install -y python3
+- hosts: all
+  remote_user: root
+  gather_facts: false
+  tasks:
+  - name: Check for Python
+    raw: test -e /usr/bin/python3
+    changed_when: false
+    failed_when: false
+    register: check_python
 
-  - name: Print os facts
-    hosts: all
-    tasks:
-      - name: Print OS
-        debug:
-          msg: "{{ ansible_distribution }}"
-      - name: Print fact
-        debug:
-          msg: "{{ some_fact }}"
+  - name: Install Python
+    raw: test -e /usr/bin/apt && (apt -y update && apt install -y python3 && apt install -y python3-apt) || (yum -y install python3 libselinux-python)
+    when: check_python.rc != 0
+- name: Installing missing packages on managed
+  hosts: all
+#  gather_facts: false
+  tasks:
+  - name: Installing missing sudo, procps
+    ansible.builtin.package:
+      name:
+        - sudo
+        - procps
+      state: present
+
+- name: Install Clickhouse
+  hosts: all
+  tasks:
+    - name: Install clickhouse-common
+      become: true
+      ansible.builtin.apt:
+        deb: https://packages.clickhouse.com/deb/pool/lts/clickhouse-common-static_22.3.3.44_amd64.deb
+    - name: Install clickhouse-client
+      become: true
+      ansible.builtin.apt:
+        deb: https://packages.clickhouse.com/deb/pool/lts/clickhouse-client_22.3.3.44_all.deb
+    - name: Install clickhouse-server
+      become: true
+      ansible.builtin.apt:
+        deb: https://packages.clickhouse.com/deb/pool/lts/clickhouse-server_22.3.3.44_all.deb
+    - name: Starting clickhouse server
+      ansible.builtin.service:
+        name: clickhouse-server
+        pattern: clickhouse-server
+        state: started
+    - name: Create database
+      ansible.builtin.command: "clickhouse-client -q 'create database logs;'"
+      register: create_db
+      failed_when: create_db.rc != 0 and create_db.rc !=82
+      changed_when: create_db.rc == 0
+
+- name: Install vector
+  hosts: all
+  tasks:
+#   - name: creating files directory
+#      file:
+#        path: ./vector
+#        state: directory
+#        mode: u=xrw,g=xr,o=xr
+#    - name: downloading vector
+#      get_url:
+#        url: https://packages.timber.io/vector/0.23.0/vector-0.23.0-x86_64-unknown-linux-gnu.tar.gz
+#        dest: ./vector/vector-0.23.0-x86_64-unknown-linux-gnu.tar.gz
+#    - name: unarchiving vector
+#      become: true
+#      unarchive:
+#        src: /vector/vector-0.23.0-x86_64-unknown-linux-gnu.tar.gz
+#        dest: /vector
+#        remote_src: yes
+#        extra_opts:
+#          - "-z"
+  - name: Install vector
+    become: true
+    ansible.builtin.apt:
+      deb: https://packages.timber.io/vector/0.23.0/vector_0.23.0-1_amd64.deb
+  - name: Copying vector config from template
+    template:
+      src: templates/vector.conf.j2
+      dest: /etc/vector/vector.toml
+  - name: Starting vector   
+    raw: vector --config /etc/vector/vector.toml
+
+
+      

@@ -25,7 +25,7 @@ docker container run --rm -d --name fedora fedora:latest sleep 60000000
 echo "**********************************"
 echo "Starting Ansible playbook"
 echo "**********************************"
-ansible-playbook site.yml -i inventory/prod.yml --ask-vault-pass
+ansible-playbook site.yml -i inventory/prod.yml 
 echo "**********************************"
 echo "Stopping all running containers"
 echo "**********************************"

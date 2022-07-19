@@ -1,0 +1,19 @@
+[sources.logs]
+  type = "demo_logs"
+  format = "syslog"
+  interval = 0.1
+
+[transforms.modify]
+  type = "remap"
+  inputs = ["logs"]
+  source = '''
+    # Parse Syslog input. The "!" means that the script should abort on error.
+    . = parse_syslog!(.message)
+  '''
+[sinks.clickhouse]
+type = "clickhouse"
+inputs = [ "modify" ]
+database = "logs"
+endpoint = "http://localhost:8123"
+table = "vector"
+#compression = "gzip"

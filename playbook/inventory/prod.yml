@@ -1,17 +1,15 @@
 ---
-  el:
-    hosts:
-      centos7:
-        ansible_connection: docker
-  deb:
-    hosts:
-      ubuntu:
-        ansible_connection: docker
-  local:
-    hosts:
-      localhost:
-        ansible_connection: ssh
-  federa:
-    hosts:
-      fedora:
-        ansible_connection: docker
+clickhouse:
+  hosts:
+    clickhouse-01:
+      ansible_host: deb11
+      ansible_connection: docker 
+
+#vector:
+#  hosts:
+#    centos7:
+#      ansible_host: centos7
+#      ansible_connection: docker
+#    debian:
+#      ansible_host: debian
+#      ansible_connection: docker
