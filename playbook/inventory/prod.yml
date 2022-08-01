@@ -2,7 +2,7 @@
 clickhouse:
   hosts:
     clickhouse-01:
-      ansible_host: deb11
+      ansible_host: ch
       ansible_connection: docker 
 
 vector:
@@ -10,6 +10,13 @@ vector:
     vector-01:
       ansible_host: vec
       ansible_connection: docker
+
+lighthouse:
+  hosts:
+    lighthouse-01:
+      ansible_host: lh
+      ansible_connection: docker
+
 #    debian:
 #      ansible_host: debian
 #      ansible_connection: docker

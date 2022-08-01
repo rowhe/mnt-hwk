@@ -4,34 +4,75 @@
   gather_facts: false
   tasks:
   - name: Check for Python
-    raw: test -e /usr/bin/python3
+    ansible.builtin.raw: test -e /usr/bin/python3
     changed_when: false
     failed_when: false
     register: check_python
 
   - name: Install Python
-    raw: test -e /usr/bin/apt && (apt -y update && apt install -y python3 && apt install -y python3-apt) || (yum -y install python3 libselinux-python)
+    ansible.builtin.raw: test -e /usr/bin/apt &&
+                         (apt -y update && apt install -y python3 && apt install -y python3-apt)
+                         || (yum -y install python3 libselinux-python)
     when: check_python.rc != 0
 
 - name: Installing missing packages on managed
   hosts: all
   tasks:
-  - name: Installing missing sudo, procps, nano
+  - name: Installing missing sudo, procps, nano, unzip
     ansible.builtin.package:
       name:
         - sudo
         - procps
         - nano
+        - unzip
+        - curl
       state: present
 
 - name: Installing nginx
-  hosts: clickhouse-01
+  hosts: lighthouse-01
   tasks:
-  - name: Installing nginx
-    ansible.builtin.package:
-      name:
-        - nginx
-      state: present
+    - name: Installing nginx package
+      ansible.builtin.package:
+        name:
+          - nginx
+        state: present
+
+- name: Lighthouse
+  hosts: lighthouse-01
+  tasks:
+    - name: Creating "files" directory
+      ansible.builtin.file:
+        path: ./files
+        state: directory
+        mode: 0755
+    - name: Downloading lighthouse
+      ansible.builtin.get_url:
+        url: https://github.com/VKCOM/lighthouse/archive/refs/heads/master.zip
+        dest: ./files/lighthouse.zip
+        mode: 0644
+    - name: Unarchiving Lighthouse
+      ansible.builtin.unarchive:
+        src: ./files/lighthouse.zip
+        dest: ./files
+        remote_src: true
+    - name: Copying lighthouse files to /var/www
+      ansible.builtin.copy:
+        src: ./files/lighthouse-master
+        dest: /var/www
+        mode: preserve
+        remote_src: true
+# don't forget to add nginx config here
+
+    - name: Enabling lighthouse site in nginx config file
+      ansible.builtin.copy:
+        src: templates/nginx_sites_enabled.conf.j2
+        dest: /etc/nginx/sites-available/default
+        mode: 0644
+    - name: Starting nginx
+      ansible.builtin.service:
+        name: nginx
+        pattern: nginx
+        state: started
 
 - name: Install Clickhouse
   hosts: clickhouse-01
@@ -48,6 +89,11 @@
       become: true
       ansible.builtin.apt:
         deb: https://packages.clickhouse.com/deb/pool/lts/clickhouse-server_22.3.3.44_all.deb
+    - name: Copying clickhouse config file
+      ansible.builtin.copy:
+        src: templates/config.xml.j2
+        dest: /etc/clickhouse-server/config.xml
+        mode: 0644
     - name: Starting clickhouse server
       ansible.builtin.service:
         name: clickhouse-server
@@ -59,33 +105,28 @@
       failed_when: create_db.rc != 0 and create_db.rc !=82
       changed_when: create_db.rc == 0
 
+
 - name: Install vector
   hosts: vector-01
   tasks:
-#   - name: creating files directory
-#      file:
-#        path: ./vector
-#        state: directory
-#        mode: u=xrw,g=xr,o=xr
-#    - name: downloading vector
-#      get_url:
-#        url: https://packages.timber.io/vector/0.23.0/vector-0.23.0-x86_64-unknown-linux-gnu.tar.gz
-#        dest: ./vector/vector-0.23.0-x86_64-unknown-linux-gnu.tar.gz
-#    - name: unarchiving vector
-#      become: true
-#      unarchive:
-#        src: /vector/vector-0.23.0-x86_64-unknown-linux-gnu.tar.gz
-#        dest: /vector
-#        remote_src: yes
-#        extra_opts:
-#          - "-z"
-  - name: Install vector
-    become: true
-    ansible.builtin.apt:
-      deb: https://packages.timber.io/vector/0.23.0/vector_0.23.0-1_amd64.deb
-  - name: Copying vector config from template
-    template:
-      src: templates/vector.conf.j2
-      dest: /etc/vector/vector.toml
-  - name: Starting vector   
-    raw: if [[ ! $(pgrep vector) == "" ]]; then exit; else vector --config /etc/vector/vector.toml & fi
+    - name: Install vector
+      become: true
+      ansible.builtin.apt:
+        deb: https://packages.timber.io/vector/0.23.0/vector_0.23.0-1_amd64.deb
+    - name: Copying vector config from template
+      ansible.builtin.template:
+        src: templates/vector.conf.j2
+        dest: /etc/vector/vector.toml
+        mode: 0644
+    - name: Copying service unit file
+      ansible.builtin.template:
+        src: templates/vector.service.j2
+        dest: /etc/init.d/vector
+        mode: 0755
+    - name: Starting Vector
+      ansible.builtin.service:
+        name: vector
+        pattern: vector
+        state: started
+# - name: Starting vector
+# ansible.builtin.raw: if [[ ! $(pgrep vector) == "" ]]; then exit; else vector --config /etc/vector/vector.toml & fi
