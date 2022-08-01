@@ -12,19 +12,29 @@
   - name: Install Python
     raw: test -e /usr/bin/apt && (apt -y update && apt install -y python3 && apt install -y python3-apt) || (yum -y install python3 libselinux-python)
     when: check_python.rc != 0
+
 - name: Installing missing packages on managed
   hosts: all
-#  gather_facts: false
   tasks:
-  - name: Installing missing sudo, procps
+  - name: Installing missing sudo, procps, nano
     ansible.builtin.package:
       name:
         - sudo
         - procps
+        - nano
+      state: present
+
+- name: Installing nginx
+  hosts: clickhouse-01
+  tasks:
+  - name: Installing nginx
+    ansible.builtin.package:
+      name:
+        - nginx
       state: present
 
 - name: Install Clickhouse
-  hosts: all
+  hosts: clickhouse-01
   tasks:
     - name: Install clickhouse-common
       become: true
@@ -50,7 +60,7 @@
       changed_when: create_db.rc == 0
 
 - name: Install vector
-  hosts: all
+  hosts: vector-01
   tasks:
 #   - name: creating files directory
 #      file:
@@ -78,7 +88,4 @@
       src: templates/vector.conf.j2
       dest: /etc/vector/vector.toml
   - name: Starting vector   
-    raw: vector --config /etc/vector/vector.toml
-
-
-      
+    raw: if [[ ! $(pgrep vector) == "" ]]; then exit; else vector --config /etc/vector/vector.toml & fi

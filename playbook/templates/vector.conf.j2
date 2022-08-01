@@ -10,10 +10,16 @@
     # Parse Syslog input. The "!" means that the script should abort on error.
     . = parse_syslog!(.message)
   '''
-[sinks.clickhouse]
-type = "clickhouse"
-inputs = [ "modify" ]
-database = "logs"
-endpoint = "http://localhost:8123"
-table = "vector"
+
+[sinks.out]
+    inputs = ["modify"]
+    type = "console"
+    encoding = "text"
+
+#[sinks.clickhouse]
+#type = "clickhouse"
+#inputs = [ "modify" ]
+#database = "logs"
+#endpoint = "http://localhost:8123"
+#table = "vector"
 #compression = "gzip"
