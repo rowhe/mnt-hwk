@@ -1,132 +1,36 @@
 ---
 - hosts: all
-  remote_user: root
+#  remote_user: root
   gather_facts: false
-  tasks:
-  - name: Check for Python
-    ansible.builtin.raw: test -e /usr/bin/python3
-    changed_when: false
-    failed_when: false
-    register: check_python
+  roles:
+    - python-role
+    - required-role
 
-  - name: Install Python
-    ansible.builtin.raw: test -e /usr/bin/apt &&
-                         (apt -y update && apt install -y python3 && apt install -y python3-apt)
-                         || (yum -y install python3 libselinux-python)
-    when: check_python.rc != 0
+#- name: Installing missing packages on managed
+#  hosts: all
+#  tasks:
+#  - name: Installing missing sudo, procps, nano, unzip
+#    ansible.builtin.package:
+#      name:
+#        - sudo
+#        - procps
+#        - nano
+#        - unzip
+#        - curl
+#      state: present
 
-- name: Installing missing packages on managed
-  hosts: all
-  tasks:
-  - name: Installing missing sudo, procps, nano, unzip
-    ansible.builtin.package:
-      name:
-        - sudo
-        - procps
-        - nano
-        - unzip
-        - curl
-      state: present
-
-- name: Installing nginx
+- name: Installing Lighthouse, Nginx
   hosts: lighthouse-01
-  tasks:
-    - name: Installing nginx package
-      ansible.builtin.package:
-        name:
-          - nginx
-        state: present
-
-- name: Lighthouse
-  hosts: lighthouse-01
-  tasks:
-    - name: Creating "files" directory
-      ansible.builtin.file:
-        path: ./files
-        state: directory
-        mode: 0755
-    - name: Downloading lighthouse
-      ansible.builtin.get_url:
-        url: https://github.com/VKCOM/lighthouse/archive/refs/heads/master.zip
-        dest: ./files/lighthouse.zip
-        mode: 0644
-    - name: Unarchiving Lighthouse
-      ansible.builtin.unarchive:
-        src: ./files/lighthouse.zip
-        dest: ./files
-        remote_src: true
-    - name: Copying lighthouse files to /var/www
-      ansible.builtin.copy:
-        src: ./files/lighthouse-master
-        dest: /var/www
-        mode: preserve
-        remote_src: true
-# don't forget to add nginx config here
-
-    - name: Enabling lighthouse site in nginx config file
-      ansible.builtin.copy:
-        src: templates/nginx_sites_enabled.conf.j2
-        dest: /etc/nginx/sites-available/default
-        mode: 0644
-    - name: Starting nginx
-      ansible.builtin.service:
-        name: nginx
-        pattern: nginx
-        state: started
+  roles:
+    - nginx-role
+    - lighthouse-role
 
 - name: Install Clickhouse
   hosts: clickhouse-01
-  tasks:
-    - name: Install clickhouse-common
-      become: true
-      ansible.builtin.apt:
-        deb: https://packages.clickhouse.com/deb/pool/lts/clickhouse-common-static_22.3.3.44_amd64.deb
-    - name: Install clickhouse-client
-      become: true
-      ansible.builtin.apt:
-        deb: https://packages.clickhouse.com/deb/pool/lts/clickhouse-client_22.3.3.44_all.deb
-    - name: Install clickhouse-server
-      become: true
-      ansible.builtin.apt:
-        deb: https://packages.clickhouse.com/deb/pool/lts/clickhouse-server_22.3.3.44_all.deb
-    - name: Copying clickhouse config file
-      ansible.builtin.copy:
-        src: templates/config.xml.j2
-        dest: /etc/clickhouse-server/config.xml
-        mode: 0644
-    - name: Starting clickhouse server
-      ansible.builtin.service:
-        name: clickhouse-server
-        pattern: clickhouse-server
-        state: started
-    - name: Create database
-      ansible.builtin.command: "clickhouse-client -q 'create database logs;'"
-      register: create_db
-      failed_when: create_db.rc != 0 and create_db.rc !=82
-      changed_when: create_db.rc == 0
+  roles:
+    - clickhouse-role
 
-
-- name: Install vector
+- name: Install Vector
   hosts: vector-01
-  tasks:
-    - name: Install vector
-      become: true
-      ansible.builtin.apt:
-        deb: https://packages.timber.io/vector/0.23.0/vector_0.23.0-1_amd64.deb
-    - name: Copying vector config from template
-      ansible.builtin.template:
-        src: templates/vector.conf.j2
-        dest: /etc/vector/vector.toml
-        mode: 0644
-    - name: Copying service unit file
-      ansible.builtin.template:
-        src: templates/vector.service.j2
-        dest: /etc/init.d/vector
-        mode: 0755
-    - name: Starting Vector
-      ansible.builtin.service:
-        name: vector
-        pattern: vector
-        state: started
-# - name: Starting vector
-# ansible.builtin.raw: if [[ ! $(pgrep vector) == "" ]]; then exit; else vector --config /etc/vector/vector.toml & fi
+  roles:
+    - role: vector-role

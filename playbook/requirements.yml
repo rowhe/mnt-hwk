@@ -1,0 +1,26 @@
+---
+- src: git@github.com:rowhe/clickhouse-role.git
+  scm: git
+  version: "1.0.0"
+  name: clickhouse-role
+- src: git@github.com:rowhe/lighthouse-role.git
+  scm: git
+  version: "1.0.0"
+  name: lighthouse-role
+- src: git@github.com:rowhe/nginx-role.git
+  scm: git
+  version: "1.0.0"
+  name: nginx-role
+- src: git@github.com:rowhe/vector-role.git
+  scm: git
+  version: "1.0.0"
+  name: vector-role
+- src: git@github.com:rowhe/python-role.git
+  scm: git
+  version: "1.0.0"
+  name: python-role
+- src: git@github.com:rowhe/required-role.git
+  scm: git
+  version: "1.0.0"
+  name: required-role
+
