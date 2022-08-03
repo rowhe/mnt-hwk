@@ -1,5 +1,12 @@
 # Описание плейбука site.yml
 Данный плейбук предназначен для развертывания и настройки сервисов clickhouse+lighthouse и vector на докер контейнерах с системой debian 11
+Установка осуществляется при помощи ролей:
+- roles/python-role
+- roles/required-role
+- roles/nginx-role
+- roles/lighthouse-role
+- roles/clickhouse-role
+- roles/vector-role
 
 * Технические требования к запуску плейбука:
 1. Запущенны докер контейнеры с именами vec, lg и ch из образа debian:11 в качестве managed host
